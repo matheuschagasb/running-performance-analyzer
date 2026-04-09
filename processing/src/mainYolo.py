@@ -41,7 +41,7 @@ results = model.predict(source='./run/profissional.mp4', save=True, show=True, s
 passos_contados = 0
 perna_esquerda_em_flexao = False
 perna_direita_em_flexao = False
-ANGULO_FLEXAO_JOELHO_LIMIAR = 150  # Limiar em graus para considerar a perna flexionada
+ANGULO_FLEXAO_JOELHO_LIMIAR = 30 # Limiar em graus para considerar a perna flexionada
 tempo_inicio = time.time()
 
 # Itera sobre os frames do resultado
@@ -70,12 +70,14 @@ for frame_idx, r in enumerate(results):
             print(f"Cotovelo Esquerdo: {angulo_cotovelo_e:.2f}°")
 
         if all(pontos[p][0] > 0 for p in ['right_hip', 'right_knee', 'right_ankle']):
-            angulo_joelho_d = calcular_angulo(pontos['right_hip'], pontos['right_knee'], pontos['right_ankle'])
-            print(f"Joelho Direito: {angulo_joelho_d:.2f}°")
+            angulo_interno_joelho_d = calcular_angulo(pontos['right_hip'], pontos['right_knee'], pontos['right_ankle'])
+            angulo_joelho_d = 180 - angulo_interno_joelho_d
+            print(f"Flexão Joelho Direito: {angulo_joelho_d:.2f}°")
 
         if all(pontos[p][0] > 0 for p in ['left_hip', 'left_knee', 'left_ankle']):
-            angulo_joelho_e = calcular_angulo(pontos['left_hip'], pontos['left_knee'], pontos['left_ankle'])
-            print(f"Joelho Esquerdo: {angulo_joelho_e:.2f}°")
+            angulo_interno_joelho_e = calcular_angulo(pontos['left_hip'], pontos['left_knee'], pontos['left_ankle'])
+            angulo_joelho_e = 180 - angulo_interno_joelho_e
+            print(f"Flexão Joelho Esquerdo: {angulo_joelho_e:.2f}°")
 
         if all(pontos[p][0] > 0 for p in ['right_shoulder', 'right_hip', 'right_knee']):
             angulo_quadril_d = calcular_angulo(pontos['right_shoulder'], pontos['right_hip'], pontos['right_knee'])
@@ -103,17 +105,17 @@ for frame_idx, r in enumerate(results):
 
         # --- Análise de Cadência ---
         if angulo_joelho_e is not None:
-            if angulo_joelho_e < ANGULO_FLEXAO_JOELHO_LIMIAR and not perna_esquerda_em_flexao:
+            if angulo_joelho_e > ANGULO_FLEXAO_JOELHO_LIMIAR and not perna_esquerda_em_flexao:
                 perna_esquerda_em_flexao = True
                 passos_contados += 1
-            elif angulo_joelho_e >= ANGULO_FLEXAO_JOELHO_LIMIAR:
+            elif angulo_joelho_e <= ANGULO_FLEXAO_JOELHO_LIMIAR:
                 perna_esquerda_em_flexao = False
-        
+
         if angulo_joelho_d is not None:
-            if angulo_joelho_d < ANGULO_FLEXAO_JOELHO_LIMIAR and not perna_direita_em_flexao:
+            if angulo_joelho_d > ANGULO_FLEXAO_JOELHO_LIMIAR and not perna_direita_em_flexao:
                 perna_direita_em_flexao = True
                 passos_contados += 1
-            elif angulo_joelho_d >= ANGULO_FLEXAO_JOELHO_LIMIAR:
+            elif angulo_joelho_d <= ANGULO_FLEXAO_JOELHO_LIMIAR:
                 perna_direita_em_flexao = False
 
         tempo_decorrido = time.time() - tempo_inicio

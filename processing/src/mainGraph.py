@@ -14,7 +14,10 @@ KEYPOINT_DICT = {
 
 def calcular_angulo(a, b, c):
     """Calcula o ângulo entre três pontos (em graus)."""
-    angulo = math.degrees(math.atan2(c[1] - b[1], c[0] - b[0]) - math.atan2(a[1] - b[1], a[0] - b[0]))
+    angulo = math.degrees(
+        math.atan2(c[1] - b[1], c[0] - b[0]) -
+        math.atan2(a[1] - b[1], a[0] - b[0])
+    )
     angulo = abs(angulo)
     if angulo > 180.0:
         angulo = 360.0 - angulo
@@ -24,13 +27,13 @@ def gerar_graficos(dados):
     """Gera e salva os gráficos da análise."""
     print("\nGerando gráficos da análise...")
     
-    # Gráfico 1: Ângulo dos Joelhos ao Longo do Tempo
+    # Gráfico 1: Flexão dos Joelhos ao Longo do Tempo
     plt.figure(figsize=(12, 6))
     plt.plot(dados['frames'], dados['angulo_joelho_d'], label='Joelho Direito', color='blue', alpha=0.7)
     plt.plot(dados['frames'], dados['angulo_joelho_e'], label='Joelho Esquerdo', color='red', alpha=0.7)
-    plt.title('Ângulo dos Joelhos Durante a Corrida')
+    plt.title('Flexão dos Joelhos Durante a Corrida')
     plt.xlabel('Frame')
-    plt.ylabel('Ângulo (graus)')
+    plt.ylabel('Flexão (graus)')
     plt.legend()
     plt.grid(True)
     plt.savefig('grafico_angulo_joelhos.png')
@@ -69,13 +72,18 @@ def gerar_graficos(dados):
 
 # --- Estrutura para armazenar dados da análise ---
 dados_analise = {
-    "frames": [], "angulo_cotovelo_d": [], "angulo_cotovelo_e": [],
-    "angulo_joelho_d": [], "angulo_joelho_e": [], "angulo_quadril_d": [],
-    "angulo_quadril_e": [], "inclinacao_tronco": []
+    "frames": [],
+    "angulo_cotovelo_d": [],
+    "angulo_cotovelo_e": [],
+    "angulo_joelho_d": [],
+    "angulo_joelho_e": [],
+    "angulo_quadril_d": [],
+    "angulo_quadril_e": [],
+    "inclinacao_tronco": []
 }
 
 # Carrega o modelo YOLO
-model = YOLO('yolo26x-pose.pt') 
+model = YOLO('yolo26x-pose.pt')
 
 # Executa a predição no vídeo
 results = model.predict(source='./run/profissional.mp4', save=True, show=True, stream=True)
@@ -84,12 +92,13 @@ results = model.predict(source='./run/profissional.mp4', save=True, show=True, s
 passos_contados = 0
 perna_esquerda_em_flexao = False
 perna_direita_em_flexao = False
-ANGULO_FLEXAO_JOELHO_LIMIAR = 150
+ANGULO_FLEXAO_JOELHO_LIMIAR = 30
 tempo_inicio = time.time()
 
 # Itera sobre os frames do resultado
 for frame_idx, r in enumerate(results):
     dados_analise['frames'].append(frame_idx)
+
     # Inicializa todos os valores do frame como NaN
     for key in dados_analise:
         if key != 'frames' and len(dados_analise[key]) < len(dados_analise['frames']):
@@ -102,40 +111,68 @@ for frame_idx, r in enumerate(results):
 
         # --- Cálculo e Armazenamento dos Ângulos ---
         if all(pontos[p][0] > 0 for p in ['right_shoulder', 'right_elbow', 'right_wrist']):
-            dados_analise['angulo_cotovelo_d'][-1] = calcular_angulo(pontos['right_shoulder'], pontos['right_elbow'], pontos['right_wrist'])
+            dados_analise['angulo_cotovelo_d'][-1] = calcular_angulo(
+                pontos['right_shoulder'], pontos['right_elbow'], pontos['right_wrist']
+            )
+
         if all(pontos[p][0] > 0 for p in ['left_shoulder', 'left_elbow', 'left_wrist']):
-            dados_analise['angulo_cotovelo_e'][-1] = calcular_angulo(pontos['left_shoulder'], pontos['left_elbow'], pontos['left_wrist'])
+            dados_analise['angulo_cotovelo_e'][-1] = calcular_angulo(
+                pontos['left_shoulder'], pontos['left_elbow'], pontos['left_wrist']
+            )
+
         if all(pontos[p][0] > 0 for p in ['right_hip', 'right_knee', 'right_ankle']):
-            dados_analise['angulo_joelho_d'][-1] = calcular_angulo(pontos['right_hip'], pontos['right_knee'], pontos['right_ankle'])
+            angulo_interno_joelho_d = calcular_angulo(
+                pontos['right_hip'], pontos['right_knee'], pontos['right_ankle']
+            )
+            dados_analise['angulo_joelho_d'][-1] = 180 - angulo_interno_joelho_d
+
         if all(pontos[p][0] > 0 for p in ['left_hip', 'left_knee', 'left_ankle']):
-            dados_analise['angulo_joelho_e'][-1] = calcular_angulo(pontos['left_hip'], pontos['left_knee'], pontos['left_ankle'])
+            angulo_interno_joelho_e = calcular_angulo(
+                pontos['left_hip'], pontos['left_knee'], pontos['left_ankle']
+            )
+            dados_analise['angulo_joelho_e'][-1] = 180 - angulo_interno_joelho_e
+
         if all(pontos[p][0] > 0 for p in ['right_shoulder', 'right_hip', 'right_knee']):
-            dados_analise['angulo_quadril_d'][-1] = calcular_angulo(pontos['right_shoulder'], pontos['right_hip'], pontos['right_knee'])
+            dados_analise['angulo_quadril_d'][-1] = calcular_angulo(
+                pontos['right_shoulder'], pontos['right_hip'], pontos['right_knee']
+            )
+
         if all(pontos[p][0] > 0 for p in ['left_shoulder', 'left_hip', 'left_knee']):
-            dados_analise['angulo_quadril_e'][-1] = calcular_angulo(pontos['left_shoulder'], pontos['left_hip'], pontos['left_knee'])
+            dados_analise['angulo_quadril_e'][-1] = calcular_angulo(
+                pontos['left_shoulder'], pontos['left_hip'], pontos['left_knee']
+            )
 
         # --- Análise de Postura do Tronco ---
         if all(pontos[p][0] > 0 for p in ['right_shoulder', 'left_shoulder', 'right_hip', 'left_hip']):
-            ponto_medio_ombros = ((pontos['left_shoulder'][0] + pontos['right_shoulder'][0]) / 2, (pontos['left_shoulder'][1] + pontos['right_shoulder'][1]) / 2)
-            ponto_medio_quadril = ((pontos['left_hip'][0] + pontos['right_hip'][0]) / 2, (pontos['left_hip'][1] + pontos['right_hip'][1]) / 2)
+            ponto_medio_ombros = (
+                (pontos['left_shoulder'][0] + pontos['right_shoulder'][0]) / 2,
+                (pontos['left_shoulder'][1] + pontos['right_shoulder'][1]) / 2
+            )
+            ponto_medio_quadril = (
+                (pontos['left_hip'][0] + pontos['right_hip'][0]) / 2,
+                (pontos['left_hip'][1] + pontos['right_hip'][1]) / 2
+            )
             ponto_vertical_imaginario = (ponto_medio_quadril[0], ponto_medio_quadril[1] - 50)
-            dados_analise['inclinacao_tronco'][-1] = calcular_angulo(ponto_vertical_imaginario, ponto_medio_quadril, ponto_medio_ombros)
+
+            dados_analise['inclinacao_tronco'][-1] = calcular_angulo(
+                ponto_vertical_imaginario, ponto_medio_quadril, ponto_medio_ombros
+            )
 
         # --- Análise de Cadência ---
         angulo_joelho_e_atual = dados_analise['angulo_joelho_e'][-1]
         if not np.isnan(angulo_joelho_e_atual):
-            if angulo_joelho_e_atual < ANGULO_FLEXAO_JOELHO_LIMIAR and not perna_esquerda_em_flexao:
+            if angulo_joelho_e_atual > ANGULO_FLEXAO_JOELHO_LIMIAR and not perna_esquerda_em_flexao:
                 perna_esquerda_em_flexao = True
                 passos_contados += 1
-            elif angulo_joelho_e_atual >= ANGULO_FLEXAO_JOELHO_LIMIAR:
+            elif angulo_joelho_e_atual <= ANGULO_FLEXAO_JOELHO_LIMIAR:
                 perna_esquerda_em_flexao = False
         
         angulo_joelho_d_atual = dados_analise['angulo_joelho_d'][-1]
         if not np.isnan(angulo_joelho_d_atual):
-            if angulo_joelho_d_atual < ANGULO_FLEXAO_JOELHO_LIMIAR and not perna_direita_em_flexao:
+            if angulo_joelho_d_atual > ANGULO_FLEXAO_JOELHO_LIMIAR and not perna_direita_em_flexao:
                 perna_direita_em_flexao = True
                 passos_contados += 1
-            elif angulo_joelho_d_atual >= ANGULO_FLEXAO_JOELHO_LIMIAR:
+            elif angulo_joelho_d_atual <= ANGULO_FLEXAO_JOELHO_LIMIAR:
                 perna_direita_em_flexao = False
     else:
         print(f"--- Frame {frame_idx}: Sem keypoints detectados ---")
